@@ -26,3 +26,7 @@ for(i in 1:nf){
 cca <- MultiCCA(X, 2, ncomponents = 6, trace = TRUE, standardize = FALSE)
 plist <- lapply(1:nf, function(i) X[[i]] %*% cca$ws[[i]])
 
+## Generating plots highlighting groups 1, 6, and 13 as well
+## as variables selected in first component
+
+pairs(plist[[1]][,1:3], lower.panel = NULL, diag.panel = panel.hist)
