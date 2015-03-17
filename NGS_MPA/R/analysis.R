@@ -23,10 +23,27 @@ for(i in 1:nf){
 }
 
 ## Run sparse CCA
-cca <- MultiCCA(X, 2, ncomponents = 6, trace = TRUE, standardize = FALSE)
+perm <- MultiCCA.permute(X)
+
+cca <- MultiCCA(X, 2.3, ncomponents = 6, 
+		trace = TRUE, standardize = FALSE)
 plist <- lapply(1:nf, function(i) X[[i]] %*% cca$ws[[i]])
 
 ## Generating plots highlighting groups 1, 6, and 13 as well
 ## as variables selected in first component
+cols <- rep(rgb(190,190,190,50,maxColorValue=255), nrow(tmp))
+cols[tmp$GROUP == 1] <- 'blue'
+cols[tmp$GROUP == 6] <- 'green'
+cols[tmp$GROUP == 13] <- 'red'
 
-pairs(plist[[1]][,1:3], lower.panel = NULL, diag.panel = panel.hist)
+highlight <- rep(FALSE, nrow(tmp))
+highlight[tmp$GROUP %in% c(1,6,13)] <- TRUE
+
+
+for(i in 1:nf){
+	png(paste('plots/sparse_cca',i,'.png',sep=''), height = 800, width = 800)
+	plotcca(plist[[i]][,1:3],cca$ws[[i]][,1:3],3,
+			colnames(X[[i]]),pch=19,cex=0.5, col = cols,
+			pltname = d[i], highlight = highlight, cex.main = 2)
+	dev.off()
+}
