@@ -1,0 +1,135 @@
+CHANGES IN VERSION 0.8.09 (2012-05-25)
+
+  o added treatment of one-dimensional data in pfa
+
+CHANGES IN VERSION 0.8.08 (2012-05-24)
+
+BUG FIXES
+
+  o changed argument log -> logarithm in determinant function
+
+CHANGES IN VERSION 0.8.07 (2011-10-14)
+
+  o removed compiler and methods from dependencies
+  o packageStartupMessage in firstlib.R
+
+
+CHANGES IN VERSION 0.8.06 (2011-07-27)
+
+  o added compiler package to dependencies
+  o option for exponential prior on W added in pfa
+
+CHANGES IN VERSION 0.8.05 (2011-07-15)
+
+  o optimize.parameters.R sometimes got stuck due to very mild
+  convergence criterion bug. Now corrected.
+
+CHANGES IN VERSION 0.8.04 (2011-07-11)
+
+  o added pfa.log.likelihood
+
+CHANGES IN VERSION 0.8.03 (2011-04-13)
+
+  o plotVar fixed (screen removed)
+
+CHANGES IN VERSION 0.8.01 (2011-03-28)
+
+  o bug with matched = TRUE, Nm.Wx.Wy.sigma = 0, with diagonal
+    covariances and identical isotropic covariances; in W.simcca.EM
+    function the W$total name was missing, causing failure. Corrected.
+
+CHANGES IN VERSION 0.7.07 (2011-02-25)
+
+  o package was accepted to CRAN and passed all tests; added links to
+    vignette and website
+  o tests/ directory removed, too time-consuming.
+
+CHANGES IN VERSION 0.7.04 (2011-02-21)
+
+  o covLimit parameter name was changed into epsilon
+
+  o convergence is now checked across multiple consecutive steps to
+    improve stability of the results: the par.change option was
+    removed, and convergence.steps option added in
+    fit.dependency.model/optimize.parameters
+
+  o added intercept calculation in check.data.R
+
+BUG FIXES
+
+  o marginalCovariances definition was missing in some
+    optimize.parameters calls in fit.dependency.model.R; corrected.
+
+CHANGES IN VERSION 0.7.01 (2011-02-13)
+
+  o updated vignette and man pages. ready for initial submission to
+    CRAN.
+
+CHANGES IN VERSION 0.4.20 (2011-02-13)
+
+  o added tests/depmod.simcca.R for case Wx = Wy; W free
+    still some unoptimal convergence with full covariances
+
+CHANGES IN VERSIOn 0.4.19 (2011-02-13)
+
+  o added tests/depmod.R for case Wx != Wy; W free
+    still some unoptimal convergence with full covariances
+
+CHANGES IN VERSIOn 0.4.18 (2011-02-13)
+
+  o added marginalCovariances isotropic, identical isotropic, diagonal
+    in fit.dependency.model and tests/psimcca.nnW.R. Still needs
+    simple speedups and more robustness but tests are ok.
+
+CHANGES IN VERSIOn 0.4.17 (2011-02-13)
+
+  o added tests/pcca.nnW.R for case Wx != Wy; W>=0
+
+CHANGES IN VERSIOn 0.4.15 (2011-02-12)
+
+  o added tests/psimcca.nnW.R for case Wx = Wy; W>=0
+  o tidied up the code; combined some files in R directory
+  o added toy data generation function generate.toydata
+
+CHANGES IN VERSIOn 0.4.09 (2011-02-02)
+
+ o in calculate.ppca removed X field from W output in Y = NULL i.e.
+   one data case (now only W$total available)
+
+CHANGES IN VERSIOn 0.4.08 (2011-01-25)
+
+  o The latent variable is calculated as dependency model
+    is calculated. getZ method is used to retrieve the 
+    latent variable
+
+  o All a priori information is given as priors argument to
+    fit.dependency.model. H is changed to priors$Nm.wxwy.mean
+    and sigmas to priors$Nm.wxwy.sigma. 
+
+CHANGES IN VERSION 0.4.07 (2011-01-17)
+
+  o W.effects and z.effects removed from the package
+
+CHANGES IN VERSION 0.4.06 (2011-01-17)
+
+  o ppca method works with non-mathced data
+
+CHANGES IN VERSION 0.4.05 (2011-01-17)
+
+  o pfa method works with non-mathced data
+
+CHANGES IN VERSION 0.4.04 (2011-01-14)
+
+  o 'title' argument added to plot.DependencyModel
+
+CHANGES IN VERSION 0.4.02 (2011-01-13)
+
+  o first functional version 
+
+CHANGES IN VERSION 0.3.2 (2010-06-09)
+
+SIGNIFICANT USER-VISIBLE CHANGES
+  o combined pint and drCCA modules into a single package
+
+DOCUMENTATION
+  o collected all modules (pint, drCCA, MultiWayCCA) into a single vignette

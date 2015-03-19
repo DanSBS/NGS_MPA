@@ -4,19 +4,19 @@
 ###############################################################################
 
 
-structgcca <- function(X){
+clusCCA <- function(X, group){
 	
 	## Number of "views"
 	M <- length(X)
 	Xcomb <- do.call('cbind', X)
+	Cmat <- crossGroupCov(Xcomb, group)
 	
 	## Get dimensions of each X
 	dims <- do.call('rbind', lapply(X, dim))
 	nc <- dims[,2]
 	
-	Cmat <- t(Xcomb) %*% Xcomb
 	Dlist <- lapply(X, function(Xi){
-				t(Xi) %*% Xi
+				groupCov(Xi, group)
 			})
 	
 	Dmat <- matrix(0, nrow(Cmat), ncol(Cmat))
@@ -29,25 +29,21 @@ structgcca <- function(X){
 	}
 	
 	## Left hand inverse
-	O <- 1/(M-1)*(Cmat - Dmat)
-	Osvd <- matpow(O, 0.5)
-	Op <- Osvd$mat
-	Oi <- matpow(O, -0.5, Osvd$SVD)$mat
-	
-	## Get inverse of D matrix
-	Dsvd <- matpow(Dmat, -1)
+	Dsvd <- matpow(Dmat, -0.5)
 	Di <- Dsvd$mat
 	
+	CDmat <- 1/(M-1)*(Cmat - Dmat)
+	
 	## Matrix for running actual decomp
-	Smat <- Op %*% Di %*% Op
+	Smat <- Di %*% CDmat %*% Di
 	
 	## Get svd of Smat
 	Ssvd <- svd(Smat)
-	x
-	## Rescale canonical vectors
-	Cvec <- Oi %*% Ssvd$v
 	
-	Pvec1 <- X[[1]] %*% Ssvd$v[1:nc[1], 1:nc[1]]
+	## Rescale canonical vectors
+	Cvec <- Di %*% Ssvd$v
+	
+	return(Cvec)
 }
 
 matpow <- function(x, pow, SVD = NULL){
@@ -65,4 +61,49 @@ matpow <- function(x, pow, SVD = NULL){
 	out <- U %*% D %*% t(V)
 	
 	return(list(mat = out, SVD = sx))
+}
+
+## Cross covariance between clusters
+crossGroupCov <- function(x, group){
+	
+	spX <- split(as.data.frame(x), group)
+	ncores <- detectCores()
+	cl <- makeCluster(ncores)
+	browser()
+	CxyList <- lapply(1:length(spX), function(i){
+				allPairsCov(as.matrix(spX[[i]]), cl)
+			})
+	Cxy <- Reduce('+', CxyList)
+	stopCluster(cl)
+	return(Cxy)
+}
+
+allPairsCov <- function(x, cl){
+	
+	n <- nrow(x)
+	nc <- ncol(x)
+	browser()
+	clusterExport(cl, c('x', 'n', 'nc'))
+	tm <- system.time({CxyList <- parLapply(cl, 1:n, fun = function(i){
+				xrep <- matrix(rep(x[i,], times = n), n, nc,
+						byrow = TRUE)
+				cxy <- t(xrep) %*% x
+				cxy
+			})})
+	Cxy <- Reduce('+', CxyList)
+	
+	return(Cxy)
+}
+
+groupCov <- function(x, group){
+	
+	spX <- split(as.data.frame(x), group)
+	covs <- lapply(spX, function(u){
+				um <- as.matrix(u)
+				nrow(um) * t(um)%*%um
+			})
+	gcov <- (1/M) * Reduce('+', covs)
+	gcov <- nrow(spX[[1]])*covs[[1]]
+	
+	return(gcov)
 }

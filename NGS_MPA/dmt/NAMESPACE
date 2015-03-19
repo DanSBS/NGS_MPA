@@ -1,0 +1,59 @@
+export(
+# pint-related
+# dependency.screen,
+# fixed.window,
+# fixed.window2,
+centerData,
+compare.estimate.and.truth,
+dependency.score,
+fit.dependency.model,
+generate.toydata,
+ppca,
+pcca,
+#pcca.isotropic,
+pfa,
+pfa.neg.log.likelihood,
+# plot.DependencyModel,
+# plot.DependencyScreenModels,
+# z.expectation,
+# pint.data,
+# pint.match,
+# plot.data,
+# plot.dependency,
+# drCCA-related
+#concatenate,
+drCCAcombine,
+plotVar,
+regCCA,
+sharedVar,
+specificVar,
+#SqrtInvMat,
+z.expectation
+       )
+
+exportClasses(
+"DependencyModel"
+#"DependencyScreenModels"
+)
+
+exportMethods(
+#"[[",
+#"[[<-",
+getW,
+getPhi,
+getScore,
+getModelMethod,
+getParams,
+getWindowSize,
+getZ
+#getFeatureName,
+#getModelNumbers,
+#topModels,
+#findModel
+)
+
+importFrom(graphics, plot)
+importFrom(Matrix, nearPD)
+import(methods)
+import(MASS)
+import(mvtnorm)
