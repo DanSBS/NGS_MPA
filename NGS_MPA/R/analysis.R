@@ -21,11 +21,12 @@ for(i in 1:nf){
 	s <- 1:4
 	nc <- ncol(tmp)
 	s <- c(s, (nc-10):nc)
-	xtmp <- scale(apply(as.matrix(tmp[,-s]), 2, asinh))[tmp$GROUP %in% c(1:7), ]
+	xtmp <- scale(apply(as.matrix(tmp[tmp$GROUP %in% c(1:7),-s]), 2, asinh))
+	xtmp <- xtmp[,!apply(xtmp,2,function(u) all(is.nan(u)))]
 	X[[i]] <- xtmp
 }
 
-clus <- read.csv('data/PlatGen_ROC_wclus.csv',as.is=TRUE,
+group <- read.csv('data/PlatGen_ROC_wclus.csv',as.is=TRUE,
 		stringsAsFactors=FALSE)$Cluster
 
 ## Run sparse CCA

@@ -3,13 +3,17 @@
 # Author: Daniel V. Samarov
 ###############################################################################
 
-
+require(parallel)
+require(Rcpp)
+Sys.setenv("PKG_CXXFLAGS"="-fopenmp")
+Sys.setenv("PKG_LIBS"="-fopenmp")
+sourceCpp('src/allPairsCov.cpp')
 clusCCA <- function(X, group){
 	
 	## Number of "views"
 	M <- length(X)
 	Xcomb <- do.call('cbind', X)
-	Cmat <- crossGroupCov(Xcomb, group)
+	Cmat <- crossGroupCov(Xcomb, group, frac = 0.2)
 	
 	## Get dimensions of each X
 	dims <- do.call('rbind', lapply(X, dim))
@@ -32,10 +36,10 @@ clusCCA <- function(X, group){
 	Dsvd <- matpow(Dmat, -0.5)
 	Di <- Dsvd$mat
 	
-	CDmat <- 1/(M-1)*(Cmat - Dmat)
+	CDmat <- 1/(M-1)*(Cmat - M*Dmat)
 	
 	## Matrix for running actual decomp
-	Smat <- Di %*% CDmat %*% Di
+	Smat <- Di %*% Cmat %*% Di
 	
 	## Get svd of Smat
 	Ssvd <- svd(Smat)
@@ -64,36 +68,24 @@ matpow <- function(x, pow, SVD = NULL){
 }
 
 ## Cross covariance between clusters
-crossGroupCov <- function(x, group){
+crossGroupCov <- function(x, group, reduce = TRUE, frac = 0.2){
 	
 	spX <- split(as.data.frame(x), group)
-	ncores <- detectCores()
-	cl <- makeCluster(ncores)
-	browser()
+	nc <- ncol(x)
 	CxyList <- lapply(1:length(spX), function(i){
-				allPairsCov(as.matrix(spX[[i]]), cl)
+				xi <- as.matrix(spX[[i]])
+				if(reduce){
+					ns <- ceiling(nrow(xi) * frac)
+					xi <- kmeans(xi, ns)$centers
+				}
+				matrix(allPairsCov(xi), nc, nc)
 			})
 	Cxy <- Reduce('+', CxyList)
-	stopCluster(cl)
+
 	return(Cxy)
 }
 
-allPairsCov <- function(x, cl){
-	
-	n <- nrow(x)
-	nc <- ncol(x)
-	browser()
-	clusterExport(cl, c('x', 'n', 'nc'))
-	tm <- system.time({CxyList <- parLapply(cl, 1:n, fun = function(i){
-				xrep <- matrix(rep(x[i,], times = n), n, nc,
-						byrow = TRUE)
-				cxy <- t(xrep) %*% x
-				cxy
-			})})
-	Cxy <- Reduce('+', CxyList)
-	
-	return(Cxy)
-}
+
 
 groupCov <- function(x, group){
 	
