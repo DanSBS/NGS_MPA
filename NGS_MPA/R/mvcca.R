@@ -13,7 +13,7 @@ clusCCA <- function(X, group){
 	## Number of "views"
 	M <- length(X)
 	Xcomb <- do.call('cbind', X)
-	Cmat <- crossGroupCov(Xcomb, group, frac = 0.2)
+	Cmat <- crossGroupCov(Xcomb, group, frac = 0.1)
 	
 	## Get dimensions of each X
 	dims <- do.call('rbind', lapply(X, dim))
@@ -23,7 +23,7 @@ clusCCA <- function(X, group){
 				groupCov(Xi, group)
 			})
 	
-	Dmat <- matrix(0, nrow(Cmat), ncol(Cmat))
+	Dmat <- matrix(0, ncol(Xcomb), ncol(Xcomb))
 	
 	k <- 1
 	for(i in 1:M){
@@ -33,13 +33,14 @@ clusCCA <- function(X, group){
 	}
 	
 	## Left hand inverse
-	Dsvd <- matpow(Dmat, -0.5)
+	Dsvd <- matpow(Dmat, -0.5, reg, rnk)
 	Di <- Dsvd$mat
 	
-	CDmat <- 1/(M-1)*(Cmat - M*Dmat)
+	CmatPD <- matpow(Cmat, 1, 0, rnk)$mat
+	CDmat <- 1/(M-1)*(CmatPD - Dmat)
 	
 	## Matrix for running actual decomp
-	Smat <- Di %*% Cmat %*% Di
+	Smat <- Di %*% CDmat %*% Di
 	
 	## Get svd of Smat
 	Ssvd <- svd(Smat)
@@ -50,7 +51,7 @@ clusCCA <- function(X, group){
 	return(Cvec)
 }
 
-matpow <- function(x, pow, SVD = NULL){
+matpow <- function(x, pow, reg = 0, rnk = NULL, SVD = NULL){
 	
 	if(is.null(SVD)){
 		sx <- svd(x)
@@ -58,9 +59,17 @@ matpow <- function(x, pow, SVD = NULL){
 	else
 		sx <- SVD
 	
+	if(is.null(rnk))
+		rnk <- ncol(x)
+	
 	U <- sx$u
 	V <- sx$v
-	D <- diag(sx$d^pow)
+	val <- (sx$d+reg)^pow
+	val[-c(1:rnk)] <- 0
+	D <- diag(val)
+	
+	if(is.null(rnk))
+		rnk <- ncol(x)
 	
 	out <- U %*% D %*% t(V)
 	
@@ -72,16 +81,19 @@ crossGroupCov <- function(x, group, reduce = TRUE, frac = 0.2){
 	
 	spX <- split(as.data.frame(x), group)
 	nc <- ncol(x)
-	CxyList <- lapply(1:length(spX), function(i){
-				xi <- as.matrix(spX[[i]])
-				if(reduce){
-					ns <- ceiling(nrow(xi) * frac)
-					xi <- kmeans(xi, ns)$centers
-				}
-				matrix(allPairsCov(xi), nc, nc)
-			})
-	Cxy <- Reduce('+', CxyList)
-
+	browser()
+	Cxy <- 0
+	for(i in 1:length(spX)){
+		xi <- as.matrix(spX[[i]])
+		if(reduce){
+			ns <- ceiling(nrow(xi) * frac)
+			xi <- kmeans(xi, ns)$centers
+		}
+		tmp <- matrix(allPairsCov(xi), nc, nc)
+		print(sum((tmp - t(tmp))^2))
+		Cxy <- Cxy + tmp
+	}
+	
 	return(Cxy)
 }
 
@@ -91,11 +103,30 @@ groupCov <- function(x, group){
 	
 	spX <- split(as.data.frame(x), group)
 	covs <- lapply(spX, function(u){
-				um <- as.matrix(u)
+				um <- scale(as.matrix(u), scale = FALSE)
 				nrow(um) * t(um)%*%um
 			})
-	gcov <- (1/M) * Reduce('+', covs)
-	gcov <- nrow(spX[[1]])*covs[[1]]
+	gcov <- Reduce('+', covs)
 	
-	return(gcov)
+	Mgrp <- sum(unlist(lapply(spX, nrow))^2)
+	return(gcov/Mgrp)
+	
+}
+
+clusGroups <- function(X, k){
+	
+	out <- lapply(X, function(x){
+				kmeans(x, k)$clus
+			})
+	return(out)
+}
+
+structIndMats <- function(obj){
+	
+	out <- lapply(obj, function(cl){
+				f <- factor(cl)
+				model.matrix(~-1+f)
+			})
+	return(out)
+	
 }

@@ -20,17 +20,21 @@ SEXP allPairsCov(SEXP R_x){
 	n = x.n_rows;
 	nc = x.n_cols;
 	mat o = ones<mat>(n, 1);
-	mat cxy = zeros<mat>(nc, nc);
+	cube cxy = zeros<cube>(nc, nc, n);
 
 #pragma omp parallel
 	{
 #pragma omp for
 		for(int i=0; i<n; i++){
 			mat xrep = o * x.row(i);
-			cxy += xrep.t() * x;
+			cxy.slice(i) = (xrep.t() * x + x.t() * xrep) / 2.0;
 		}
 	}
+	mat res = zeros<mat>(nc, nc);
+	for(int i=0; i<n; i++){
+		res += cxy.slice(i);
+	}
 
-	return(Rcpp::wrap(cxy));
+	return(Rcpp::wrap(res));
 
 }

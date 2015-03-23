@@ -31,8 +31,10 @@ group <- read.csv('data/PlatGen_ROC_wclus.csv',as.is=TRUE,
 
 ## Run sparse CCA
 perm <- MultiCCA.permute(X)
-
-cca <- MultiCCA(X, 2.3, ncomponents = 6, 
+clus <- kmeans(r$proj[,1:8], 8)$clus
+mm <- model.matrix(~-1+as.factor(group))
+X[[5]] <- mm
+cca <- MultiCCA(X, 1.5, ncomponents = 4, 
 		trace = TRUE, standardize = FALSE)
 plist <- lapply(1:nf, function(i) X[[i]] %*% cca$ws[[i]])
 
@@ -46,11 +48,13 @@ cols[tmp$GROUP == 13] <- 'red'
 highlight <- rep(FALSE, nrow(tmp))
 highlight[tmp$GROUP %in% c(1,6,13)] <- TRUE
 
-i=2
+i=1
 for(i in 1:nf){
 	png(paste('plots/sparse_cca',i,'.png',sep=''), height = 800, width = 800)
-	plotcca(plist[[i]],cca$ws[[i]],5,
-			colnames(X[[i]]),pch=19,cex=0.5, col = clus,
+	
+	plotcca(plist[[i]],cca$ws[[i]],4,
+			colnames(X[[i]]),pch=19,cex=0.5, col = group,
 			pltname = d[i], highlight = NULL, cex.main = 2)
+	
 	dev.off()
 }

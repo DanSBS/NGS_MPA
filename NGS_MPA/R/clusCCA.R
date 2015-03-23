@@ -3,8 +3,7 @@
 # Author: samarov
 ###############################################################################
 
-
-clusCCA <- function (datasets, reg = 0, group) 
+regCCA <- function (datasets, reg = 0) 
 {
 	mat <- datasets
 	m <- length(mat)
@@ -31,14 +30,13 @@ clusCCA <- function (datasets, reg = 0, group)
 	covm <- array(list(), m)
 	fea <- c(rep(0, m))
 	mean_m <- array(list(), m)
-	
-	## This is where the cluster CCA code differs
 	for (i in 1:m) {
-		mean_m[[i]] <- apply(mat[[i]], 2, mean)
+#		mean_m[[i]] <- apply(mat[[i]], 2, mean)
 #		mat[[i]] <- apply(mat[[i]], 2, function(x) {
 #					x - mean(x)
 #				})
-		covm[[i]] <- groupCov(mat[[i]],group)
+#		covm[[i]] <- cov(mat[[i]])
+		covm[[i]] <- t(mat[[i]]) %*% mat[[i]]
 		fea[i] <- ncol(mat[[i]])
 	}
 	whiten_mat <- array(list(), m)
@@ -66,8 +64,9 @@ clusCCA <- function (datasets, reg = 0, group)
 	else {
 		print("Regularized gCCA")
 	}
-	a <- concatenate(whiten_mat)
-	z <- cov(a)
+	a <- do.call('cbind',whiten_mat)
+#	z <- cov(a)
+	z <- t(a) %*% a
 	eig <- svd(z)
 	proj_data <- a %*% eig$v
 	eig_wh <- array(list(), m)
@@ -94,16 +93,15 @@ clusCCA <- function (datasets, reg = 0, group)
 }
 
 
-groupCov <- function(x, group){
+SqrtInvMat <- function( matrix ) {
 	
-	covs <- lapply(split(as.data.frame(x), group), cov)
-	gcov <- covs[[1]]
-	M <- length(covs)
-	for(i in 2:M){
-		gcov <- gcov + covs[[i]]
-	}
+	# Author: Abhishek Tripathi
+	# Calculate square root of inverse of an (invertible) square matrix.
 	
-	gcov <- (1/M)*gcov
+	x <- as.matrix(matrix)
 	
-	return(gcov)
+	fac <- svd(x)
+	
+	fac$v %*% (diag(1/sqrt(fac$d),nrow = length(fac$d))) %*% t(fac$u)
+	
 }
