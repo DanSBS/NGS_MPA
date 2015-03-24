@@ -33,6 +33,7 @@ plotcca <- function(proj, load, d, names,
 						las = 2, col = cols[o],
 						main = paste('Loading', ind[1]),
 						cex.main = 2)
+#				browser()
 				text(b,max(aloadi)/2,namesi[o],srt=90,cex=1.5)
 			}
 			else{

@@ -8,12 +8,14 @@ require(Rcpp)
 Sys.setenv("PKG_CXXFLAGS"="-fopenmp")
 Sys.setenv("PKG_LIBS"="-fopenmp")
 sourceCpp('src/allPairsCov.cpp')
-clusCCA <- function(X, group){
+clusCCA <- function(X, group, reg = 0, 
+		rnk = NULL, reduce = TRUE, frac = 0.2){
 	
 	## Number of "views"
 	M <- length(X)
 	Xcomb <- do.call('cbind', X)
-	Cmat <- crossGroupCov(Xcomb, group, frac = 0.1)
+	Cmat <- crossGroupCov(Xcomb, group, frac = frac, 
+			reduce = reduce)
 	
 	## Get dimensions of each X
 	dims <- do.call('rbind', lapply(X, dim))
@@ -33,10 +35,10 @@ clusCCA <- function(X, group){
 	}
 	
 	## Left hand inverse
-	Dsvd <- matpow(Dmat, -0.5, reg, rnk)
+	Dsvd <- matpow(Dmat, -0.5, rnk, reg)
 	Di <- Dsvd$mat
 	
-	CmatPD <- matpow(Cmat, 1, 0, rnk)$mat
+	CmatPD <- matpow(Cmat, 1, rnk)$mat
 	CDmat <- 1/(M-1)*(CmatPD - Dmat)
 	
 	## Matrix for running actual decomp
@@ -47,11 +49,58 @@ clusCCA <- function(X, group){
 	
 	## Rescale canonical vectors
 	Cvec <- Di %*% Ssvd$v
+	colnames(Cvec) <- colnames(Xcomb)
 	
 	return(Cvec)
 }
 
-matpow <- function(x, pow, reg = 0, rnk = NULL, SVD = NULL){
+clusCCA.pen <- function(X, group, reg = 0, 
+		rnk = NULL){
+	
+	## Number of "views"
+	M <- length(X)
+	Xcomb <- do.call('cbind', X)
+	Cmat <- t(Xcomb) %*% Xcomb
+	
+	## Get dimensions of each X
+	dims <- do.call('rbind', lapply(X, dim))
+	nc <- dims[,2]
+	
+	Dlist <- lapply(X, function(Xi){
+				groupSS(Xi, group)
+			})
+	
+	Dmat <- matrix(0, ncol(Xcomb), ncol(Xcomb))
+	
+	k <- 1
+	for(i in 1:M){
+		ir <- k:(nc[i]+(k-1))
+		Dmat[ir,ir] <- t(X[[i]])%*%X[[i]]+reg*Dlist[[i]]
+		k <- k+nc[i]
+	}
+	
+	## Left hand inverse
+	Dsvd <- matpow(Dmat, -0.5, rnk, 0)
+	Di <- Dsvd$mat
+	
+	CmatPD <- matpow(Cmat, 1, rnk)$mat
+	CDmat <- 1/(M-1)*(CmatPD - Dmat)
+	
+	## Matrix for running actual decomp
+	Smat <- Di %*% CDmat %*% Di
+	
+	## Get svd of Smat
+	Ssvd <- svd(Smat)
+	
+	## Rescale canonical vectors
+	Cvec <- Di %*% Ssvd$v
+	colnames(Cvec) <- colnames(Xcomb)
+	
+	return(Cvec)
+}
+
+
+matpow <- function(x, pow, rnk = NULL, reg = 0, SVD = NULL){
 	
 	if(is.null(SVD)){
 		sx <- svd(x)
@@ -77,11 +126,11 @@ matpow <- function(x, pow, reg = 0, rnk = NULL, SVD = NULL){
 }
 
 ## Cross covariance between clusters
-crossGroupCov <- function(x, group, reduce = TRUE, frac = 0.2){
+crossGroupCov <- function(x, group, reduce = TRUE, frac = NULL){
 	
 	spX <- split(as.data.frame(x), group)
 	nc <- ncol(x)
-	browser()
+	
 	Cxy <- 0
 	for(i in 1:length(spX)){
 		xi <- as.matrix(spX[[i]])
@@ -98,6 +147,17 @@ crossGroupCov <- function(x, group, reduce = TRUE, frac = 0.2){
 }
 
 
+groupSS <- function(x, group){
+	
+	spX <- split(as.data.frame(x), group)
+	covs <- lapply(spX, function(u){
+				um <- scale(as.matrix(u), scale = FALSE)
+				t(um)%*%um
+			})
+	gcov <- Reduce('+', covs)
+	
+	return(gcov)
+}
 
 groupCov <- function(x, group){
 	

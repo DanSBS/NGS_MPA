@@ -3,6 +3,8 @@
 # Author: Daniel V. Samarov
 ###############################################################################
 library(PMA)
+source('R/plotcca.R')
+source('R/mvcca.R')
 
 d <- dir('data')
 d <- d[d!='PlatGen_ROC_wclus.csv']
@@ -29,11 +31,12 @@ for(i in 1:nf){
 group <- read.csv('data/PlatGen_ROC_wclus.csv',as.is=TRUE,
 		stringsAsFactors=FALSE)$Cluster
 
+cCCA <- clusCCA(X, group, 0.1, frac = 0.1)
+cCCA.pen <- clusCCA.pen(X, group, 1)
+pPen <- X[[1]] %*% cCCA.pen[1:ncol(X[[1]]), 1:ncol(X[[1]])]
+
 ## Run sparse CCA
-perm <- MultiCCA.permute(X)
-clus <- kmeans(r$proj[,1:8], 8)$clus
-mm <- model.matrix(~-1+as.factor(group))
-X[[5]] <- mm
+
 cca <- MultiCCA(X, 1.5, ncomponents = 4, 
 		trace = TRUE, standardize = FALSE)
 plist <- lapply(1:nf, function(i) X[[i]] %*% cca$ws[[i]])
@@ -52,9 +55,16 @@ i=1
 for(i in 1:nf){
 	png(paste('plots/sparse_cca',i,'.png',sep=''), height = 800, width = 800)
 	
-	plotcca(plist[[i]],cca$ws[[i]],4,
-			colnames(X[[i]]),pch=19,cex=0.5, col = group,
+	plotcca(p[,1:ncol(X[[i]])],cCCA[1:ncol(X[[i]]),1:ncol(X[[i]])],4,
+			colnames(X[[i]]),pch=group,cex=0.5, col = group,
 			pltname = d[i], highlight = NULL, cex.main = 2)
 	
 	dev.off()
 }
+
+
+png('plots/cluster_cca1_v2.png', height = 800, width = 800)
+plotcca(pPen[,1:ncol(X[[i]])],cCCA.pen[1:ncol(X[[i]]),1:ncol(X[[i]])],4,
+		colnames(X[[i]]),pch=group,cex=0.5, col = group,
+		pltname = d[i], highlight = NULL, cex.main = 2)
+dev.off()
