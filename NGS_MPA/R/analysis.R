@@ -33,7 +33,8 @@ group <- read.csv('data/PlatGen_ROC_wclus.csv',as.is=TRUE,
 
 cCCA <- clusCCA(X, group, 0.1, frac = 0.1)
 cCCA.pen <- clusCCA.pen(X, group, 1)
-pPen <- X[[1]] %*% cCCA.pen[1:ncol(X[[1]]), 1:ncol(X[[1]])]
+ncols <- unlist(lapply(X, ncol))
+
 
 ## Run sparse CCA
 
@@ -51,7 +52,7 @@ cols[tmp$GROUP == 13] <- 'red'
 highlight <- rep(FALSE, nrow(tmp))
 highlight[tmp$GROUP %in% c(1,6,13)] <- TRUE
 
-i=1
+i=2
 for(i in 1:nf){
 	png(paste('plots/sparse_cca',i,'.png',sep=''), height = 800, width = 800)
 	
@@ -62,9 +63,17 @@ for(i in 1:nf){
 	dev.off()
 }
 
-
-png('plots/cluster_cca1_v2.png', height = 800, width = 800)
-plotcca(pPen[,1:ncol(X[[i]])],cCCA.pen[1:ncol(X[[i]]),1:ncol(X[[i]])],4,
-		colnames(X[[i]]),pch=group,cex=0.5, col = group,
-		pltname = d[i], highlight = NULL, cex.main = 2)
-dev.off()
+k <- 1
+par(mfrow=c(2,2))
+for(i in 1:4)
+{
+	if(i != 1)
+		k <- k + ncols[i-1]
+	pPen <- X[[i]] %*% cCCA.pen[k:sum(ncols[1:i]), 1:4]
+	
+	png(paste('plots/cluster_cca1_v2_', i, '.png', sep =''), height = 800, width = 800)
+	plotcca(pPen[,1:4],cCCA.pen[k:sum(ncols[1:i]), 1:4],4,
+			colnames(X[[i]]),pch=group,cex=0.5, col = group,
+			pltname = d[i], highlight = NULL, cex.main = 2)
+	dev.off()
+}
