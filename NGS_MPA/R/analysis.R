@@ -11,7 +11,7 @@ d <- d[d!='PlatGen_ROC_wclus.csv']
 nf <- length(d)
 
 X <- vector('list',nf)
-
+cent <- scl <- vector('list', nf)
 for(i in 1:nf){
 	f <- paste('data/',d[i],sep='')
 	print(f)
@@ -23,13 +23,18 @@ for(i in 1:nf){
 	s <- 1:4
 	nc <- ncol(tmp)
 	s <- c(s, (nc-10):nc)
+	
 	xtmp <- scale(apply(as.matrix(tmp[tmp$GROUP %in% c(1:7),-s]), 2, asinh))
+	cent[[i]] <- attr(xtmp, 'scaled:center')[!apply(xtmp,2,function(u) all(is.nan(u)))]
+	scl[[i]] <- attr(xtmp, 'scaled:scale')[!apply(xtmp,2,function(u) all(is.nan(u)))]
 	xtmp <- xtmp[,!apply(xtmp,2,function(u) all(is.nan(u)))]
 	X[[i]] <- xtmp
 }
 
-group <- read.csv('data/PlatGen_ROC_wclus.csv',as.is=TRUE,
+clus <- read.csv('data/PlatGen_ROC_wclus.csv',as.is=TRUE,
 		stringsAsFactors=FALSE)$Cluster
+group <- read.csv('data/PlatGen_ROC_wclus.csv',as.is=TRUE,
+		stringsAsFactors=FALSE)$GROUP
 
 cCCA <- clusCCA(X, group, 0.1, frac = 0.1)
 cCCA.pen <- clusCCA.pen(X, group, 1)
