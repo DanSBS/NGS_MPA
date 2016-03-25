@@ -75,7 +75,7 @@ genlasso <- function(y, X, D, approx=FALSE, maxsteps=2000, minlam=0,
 			Xi = x$v %*% (t(x$u) / x$d)
 			D2 = D %*% Xi
 		}
-		
+
 		if (!svd) out = dualpath(y2,D2,approx,maxsteps,minlam,rtol,btol,verbose)
 		else out = dualpathSvd(y2,D2,approx,maxsteps,minlam,rtol,btol,verbose)
 		

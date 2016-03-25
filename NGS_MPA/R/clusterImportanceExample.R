@@ -6,20 +6,58 @@ require(genlasso)
 require(ggplot2)
 require(MASS)
 source("C:\\Users\\samarov\\git\\gsmethods\\gsmethods\\R\\smtlasso_v2.R")
-
+source("C:/eclipse/workspace372/CARS Analysis/Simulation Study/Cell Simulation/R/vca.R")
+dataDir <- 'C:/eclipse/workspace/OMI/Dye Mixture Analysis/2 Dye Mix/output/cubes.RData'
+cubes <- load(dataDir)
 #c1 <- mvrnorm(200, c(-1,0), matrix(c(.1,.25,.25,.9),2,2))
 #c2 <- mvrnorm(200, c(1, 0), matrix(c(.1,.25,.25,.9),2,2))
 #c3 <- mvrnorm(200, c(-1,-3), matrix(c(.1,.25,.25,.9),2,2))
 #x <- rbind(c1,c2,c3)
 
 
-k <- 10
+k <- 5
 ngam <- 50
 max.iter <- 1000
 eps <- 1e-3
 lambda <- .1
+clus <- FALSE
 
-V <- vca(x, k)$Ae
+x0 <- matrix(c(cube2),
+		nrow(cube2) * ncol(cube2))
+xb <- baseline(x0, method = 'als')
+x1 <- t(apply(x0, 1, function(u){
+					locpoly(1:61, u, drv = 0,
+							degree = 1, bandwidth = 1,
+							gridsize = 61)$y
+				}))
+xb <- t(apply(x1, 1, function(u){
+					baseline(rbind(u))@corrected		
+				}))
+x <- apply(x0, 2, function(u){
+			c(image.smooth(matrix(u,128,128), theta = 1)$z)
+		})
+#x <- t(apply(x1, 1, function(u) (u - min(u))/diff(range(u))))
+
+V <- cbind()
+for(i in 2:k){
+	V <- cbind(V, vca(x, i, center = FALSE)$Ae)
+}
+
+cV <- cor(V)
+ind <- c()
+cIndx <- rep(TRUE, ncol(V))
+for(i in 1:ncol(V)){
+	iold <- cIndx[i]
+	cIndx[abs(cV[i,]) > .99] <- FALSE
+	if(iold)
+		ind <- c(ind, i)
+}
+V <- V[,ind]
+#V <- (V - min(V))/diff(range(V)) * max(x)
+V <- apply(V, 2, function(u) (u - min(u))/diff(range(u)))
+#V <- (V - min(V))/diff(range(V))
+
+V <- vca(x, k, center = TRUE)$Ae
 mfcTV <- mfClus(x, k, lambda, alpha = .1, Vstart = V, 
 		reduce = TRUE, rsize = 1000, iter = 5, 
 		clus = FALSE, normU = FALSE, pos = TRUE)
@@ -72,7 +110,7 @@ mfClus <- function(x, k,
 		print(paste('Iteration:', i))
 		
 		print('=================RUNNING SGL=====================')
-		U <- t(smtlasso(V, t(x), NULL, lambda =10, 
+		U <- t(smtlasso(V, t(x), NULL, lambda = .01, 
 						rho = 0, ngam = ngam,
 						max.iter = max.iter,
 						parallel = FALSE,
@@ -80,7 +118,6 @@ mfClus <- function(x, k,
 						method='sgl', 
 						intercept=FALSE, clus = clus,
 						singled=1))
-		
 		
 		## Remove 0 columns
 		chk0 <- colSums(U) != 0
@@ -118,6 +155,18 @@ mfClus <- function(x, k,
 			}
 			D <- -D[-rmInd,]
 			
+			UD <- rbind(U, 5*D)
+			xD <- rbind(x, matrix(0, nrow(D), ncol(x)))
+			p <- rbind()
+			p2 <- t(solve(t(UD) %*% UD) %*% t(UD) %*% (xD))
+			for(i in 1:ncol(xD))
+			{
+				print(i)
+				nn <- nnls(UD, xD[,i])
+				p <- rbind(p, coef(nn))
+				
+			}
+			
 			if(reduce)
 				Ured <- do.call('rbind',lapply(split(as.data.frame(U), s), 
 								function(u) colMeans(as.matrix(u))))
@@ -128,13 +177,17 @@ mfClus <- function(x, k,
 			
 			
 			print('=================RUNNING GENLASSO=====================')
-			SVD <- svd(Ured)
+			augU <- rbind(Ured, diag(k) * alpha)
+			SVD <- svd(augU)
+			
 			Vlist <- lapply(1:ncol(x), function(i){
-						augY <- c(Xred[,i])#, rep(0, k))
-						st <- system.time({gl <- genlasso(augY, Ured, D,
+						augY <- c(Xred[,i], rep(0, k))
+						
+						st <- system.time({gl <- genlasso(augY, augU, D,
 											maxsteps = 2000,
 											approx = TRUE,
-											minlam = 1e-10,
+											minlam = 1e-5,
+											eps = 0.01,
 											verbose = FALSE,
 											SVD = SVD)})
 						gl
@@ -149,8 +202,18 @@ mfClus <- function(x, k,
 								score <- colSums((Ured %*% vi - xi)^2) / df +
 										2 * ((nrow(Xred)+0) - df)
 								o <- order(score)[1]
-								vi[,floor(ncol(vi)/2)]
+								vi[,o]
 							}))
+#			ll <-  lapply(1:length(Vlist), function(i){
+#						gl <- Vlist[[i]]
+#						vi <- gl$beta
+#						df <- gl$df
+#						xi <- c(Xred[,i])#, rep(0, k))
+#						score <- colSums((Ured %*% vi - xi)^2) / df +
+#								2 * ((nrow(Xred)+0) - df)
+#						o <- order(score)[1]
+#						vi[,floor(ncol(vi)/2)]
+#					})
 			if(pos){
 				V <- scale(abs(V), center = FALSE)
 			}
